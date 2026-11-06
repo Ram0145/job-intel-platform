@@ -7,7 +7,7 @@
 | **Owner** | Ram Sirusanagandla ([@Ram0145](https://github.com/Ram0145)) |
 | **Started** | 2026-11-06 |
 | **Working style** | Phase by phase. Concepts first, then code, then you run it, break it, fix it, and log what you saw. |
-| **Living docs** | `PLAN.md` (this file: what we do and where we are) · `SECURITY_LOG.md` (what we tested and found) |
+| **Living docs** | `PLAN.md` (this file: what we do and where we are) · `SECURITY_LOG.md` (what we tested and found) · `CLAUDE.md` (context and rules for Claude Code sessions) |
 
 ---
 
@@ -17,6 +17,20 @@
 - **A phase is not done until its Security & Traffic Gate passes** (Section 8) and the result is recorded in `SECURITY_LOG.md`.
 - At the end of every session: tick the boxes, update the Progress dashboard, add a line to the Changelog, and write your Learning Journal entry in your own words.
 - Every change to this file goes through a pull request, just like code (that's part of the Git practice).
+
+---
+
+## Working agreement
+
+How Ram and Claude work together on this project. Claude Code reads the same rules from `CLAUDE.md`.
+
+1. **Every operation comes with its commands.** Whenever something is done (Git, GitHub, Docker, Linux, database, cloud), Claude shows the exact commands, not just the result.
+2. **Every command is explained.** What it does, what each flag means, why we need it here, and what output to expect. New concepts are explained before the code that uses them.
+3. **You type, Claude explains.** By default Ram runs the commands himself, so they become muscle memory. Claude runs them only when asked, or for mechanical steps that teach nothing new, and still shows what it ran.
+4. **Everything goes in the Command log** (Appendix A), grouped by session, as copy-pasteable blocks with a comment line above each command.
+5. **Laptop-specific commands are labelled.** Once the laptop OS is known, any command that differs on Windows/macOS/Linux shows the right version.
+6. **Every change ships through a pull request**: branch → commit → push → PR → checks → squash merge. No direct pushes to `main`.
+7. **Every session ends with the docs updated**: `PLAN.md` (checkboxes, dashboard, changelog, command log) and `SECURITY_LOG.md` (gate record, findings).
 
 ---
 
@@ -327,7 +341,9 @@ Each phase has: **Goal · Learn · Build · Traffic lab · Security lab · CI/CD
 
 **Build**
 - [x] Create the public repo `job-intel-platform` under @Ram0145
-- [ ] Merge the first pull request (this plan) with a squash merge
+- [x] Merge the first pull request (this plan) with a squash merge
+- [ ] Turn on "Automatically delete head branches" in the repo settings, and delete the merged `docs/p0-master-plan` branch
+- [ ] Clone the repo onto your laptop and continue in Claude Code (see `CLAUDE.md`)
 - [ ] Generate an ed25519 SSH key; use it for both authentication and commit signing; turn on "Vigilant mode" in GitHub
 - [ ] Add `README.md`, `PLAN.md`, `SECURITY_LOG.md`, `.gitignore` (Python, Node, `.env`, certs, `data/`)
 - [ ] Set up Python 3.12 with `uv`, `ruff` (lint + format), `pytest`
@@ -838,3 +854,157 @@ Write each entry yourself, in your own words. Explaining it is how you know you'
 |---|---|
 | 2026-11-06 | Plan created: phases 0–11, Security & Traffic Gate, SQL injection thread, Git/GitHub/GitLab/CI-CD track, branch protection policy |
 | 2026-11-06 | Repo created; plan added through the first pull request; Phase 0 started |
+| 2026-11-06 | Added the working agreement, the command log (Appendix A) and `CLAUDE.md` for the move to Claude Code |
+
+---
+
+## Appendix A. Command log
+
+Every command we run, with what it does. Newest session at the bottom. Lines starting with `#` are comments: read them, don't type them.
+
+### Session 1 — 2026-11-06 · Repo setup and the first pull request
+
+*These ran in Claude's cloud workspace (Linux). On your laptop the Git commands are identical.*
+
+**Look before you touch anything**
+
+```bash
+# List everything in a folder, including hidden files (-A = "almost all": hidden files, but not . and ..)
+ls -A job-intel-platform
+
+# Ask Git "is this folder a repository, and which commit is it on?"
+# Fails with "not a git repository" if there's no .git folder.
+git -C job-intel-platform rev-parse HEAD     # -C <dir> = run as if you were inside <dir>
+```
+
+**Get the repo**
+
+```bash
+# Rename/move a folder (Linux/macOS). Used to move draft files out of the way, nothing deleted.
+mv job-intel-platform job-intel-platform-draft
+
+# Download the repo from GitHub.
+# --depth 1 = "shallow clone": only the latest commit, not the full history (faster for big repos).
+git clone --depth 1 https://github.com/Ram0145/job-intel-platform job-intel-platform
+```
+
+**Inspect what you got**
+
+```bash
+# Show history in a custom format:
+#   %h short hash · %an author name · %ae author email · %G? signature status · %s subject line
+# %G? codes: G = good signature, N = no signature, E = signed but can't be checked here
+# (our "Initial commit" showed E: GitHub signed it, but this machine doesn't have GitHub's key to verify it)
+git log --format='%h %an <%ae> %G? %s'
+
+# List local AND remote-tracking branches (-a = all). "remotes/origin/main" is your copy of GitHub's main.
+git branch -a
+
+# Which name and email will new commits be recorded under?
+git config user.name
+git config user.email
+```
+
+**Make a change on a branch**
+
+```bash
+# Create a new branch and switch to it in one step.
+# (checkout -b is the older form; "git switch -c" is the newer equivalent and clearer.)
+git checkout -b docs/p0-master-plan
+
+# Copy files. {a,b,c} is bash "brace expansion": it expands to three separate paths.
+cp ../job-intel-platform-draft/{PLAN.md,SECURITY_LOG.md,README.md} .
+
+# What changed? --short gives one line per file:  M = modified,  ?? = untracked (new, Git isn't tracking it yet)
+git status --short
+
+# Stage the files: put them in the "staging area", i.e. what the next commit will contain.
+git add PLAN.md SECURITY_LOG.md README.md
+
+# Record the commit. -m gives the message inline.
+# Format = Conventional Commits:  <type>: <summary>   (types: feat, fix, docs, sec, ci, test, refactor)
+git commit -m "docs: add master plan, security log and README"
+# (Claude actually used "git commit -F -", which reads a multi-line message from the terminal,
+#  so it could add a body and a "Co-Authored-By" line. -m is what you'd normally type.)
+```
+
+**Send it to GitHub and open a pull request**
+
+```bash
+# Download the latest state of main from GitHub WITHOUT changing your files (safe to run anytime).
+git fetch origin main
+
+# Upload your branch. -u ("upstream") links your local branch to the GitHub branch,
+# so later you can just type "git push" / "git pull".
+git push -u origin docs/p0-master-plan
+
+# Open a pull request from the terminal (GitHub CLI). --fill uses your commit message as title/body.
+gh pr create --base main --head docs/p0-master-plan --fill
+
+# (In Claude's cloud workspace "gh pr create" is blocked, so it used the GitHub REST API instead.
+#  -X POST = create · -f = text field · -F body=@file = read the field from a file)
+gh api repos/Ram0145/job-intel-platform/pulls -X POST \
+  -f title="docs: add master plan, security log and README" \
+  -f head="docs/p0-master-plan" -f base="main" -F body=@pr_body.md
+```
+
+**Fix: branch pushed, but Git says "no remote branch"**
+
+```bash
+# Is the branch really on GitHub? ls-remote asks GitHub directly, without downloading anything.
+git ls-remote origin docs/p0-master-plan
+git rev-parse HEAD              # your local commit hash; matching hashes = same commit, nothing lost
+
+# Why Git was confused: a shallow clone only tracks "main". This shows the tracking rule ("refspec"):
+git config --get-all remote.origin.fetch
+#   → +refs/heads/main:refs/remotes/origin/main     (only main!)
+
+# Add a rule so branches named docs/* are tracked too, download them, and link the local branch.
+git config --add remote.origin.fetch '+refs/heads/docs/*:refs/remotes/origin/docs/*'
+git fetch origin
+git branch -u origin/docs/p0-master-plan      # -u = set upstream
+
+# -s short, -b show branch line: "## docs/p0-master-plan...origin/docs/p0-master-plan" = linked and in sync
+git status -sb
+```
+
+*A normal (non-shallow) clone tracks every branch, so on your laptop you won't hit this.*
+
+### Session 2 — 2026-11-06 · Working agreement, command log, handoff to Claude Code
+
+```bash
+# Has PR #1 been merged? (REST API; --jq picks fields out of the JSON reply)
+gh api repos/Ram0145/job-intel-platform/pulls/1 --jq '{state, merged}'
+#   → {"merged":true,"state":"closed"}
+
+# Go back to main and bring it up to date.
+# --ff-only = only "fast-forward" (move main forward); refuse if that would need a merge commit. Safe default.
+git switch main
+git pull --ff-only origin main
+
+# New branch for this change.
+git switch -c docs/p0-working-agreement
+
+# Delete the old local branch. Capital -D = force.
+# Why force? A SQUASH merge creates a brand-new commit on main, so Git can't see that the
+# branch's commit was "merged" and lowercase -d refuses. -D is safe here because the PR is merged.
+git branch -D docs/p0-master-plan
+
+# List the branches that exist on GitHub.
+git ls-remote origin 'refs/heads/*'
+
+# Stage, commit, push, open the PR (same pattern as Session 1).
+git add PLAN.md CLAUDE.md README.md
+git commit -m "docs: add working agreement, command log and CLAUDE.md handoff"
+git push -u origin docs/p0-working-agreement
+gh pr create --base main --fill
+```
+
+**Your turn (after merging PR #2):** clean up the merged branch on GitHub.
+
+```bash
+# Delete a branch on GitHub (the remote). Merged PR branches are safe to delete; the PR keeps the history.
+git push origin --delete docs/p0-master-plan
+```
+
+Better long-term: **Settings → General → Pull Requests → "Automatically delete head branches"**, so GitHub does this after every merge.
