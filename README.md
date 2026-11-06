@@ -8,6 +8,7 @@ An end-to-end learning project, built from scratch: web scraping → secure stor
 |---|---|
 | [PLAN.md](PLAN.md) | The master plan: phases, tasks, progress, decisions |
 | [SECURITY_LOG.md](SECURITY_LOG.md) | Threat model, findings, per-phase security & traffic gate records |
+| [CLAUDE.md](CLAUDE.md) | Context and working rules for Claude Code sessions |
 
 ## Stack (planned)
 
